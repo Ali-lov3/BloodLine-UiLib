@@ -6,17 +6,242 @@ local tween       = game:GetService("TweenService")
 local uis         = game:GetService("UserInputService")
 local plrs        = game:GetService("Players")
 local runService  = game:GetService("RunService")
+local http        = game:GetService("HttpService")
 local lp          = plrs.LocalPlayer
 
-local accent      = Color3.fromRGB(255, 35, 65)
-local accentDark  = Color3.fromRGB(130, 12, 28)
-local bgDark      = Color3.fromRGB(12, 12, 16)
-local bgMedium    = Color3.fromRGB(18, 18, 24)
-local bgLight     = Color3.fromRGB(24, 24, 32)
-local strokeDark  = Color3.fromRGB(38, 38, 50)
-local strokeAccent= Color3.fromRGB(255, 35, 65)
-local textMain    = Color3.fromRGB(255, 255, 255)
-local textMuted   = Color3.fromRGB(150, 150, 168)
+local themes = {
+    Red = {
+        Accent = Color3.fromRGB(255, 35, 65),
+        AccentDark = Color3.fromRGB(130, 12, 28),
+        Background = Color3.fromRGB(12, 12, 16),
+        Surface = Color3.fromRGB(18, 18, 24),
+        Element = Color3.fromRGB(24, 24, 32),
+        Stroke = Color3.fromRGB(38, 38, 50),
+        Text = Color3.fromRGB(255, 255, 255),
+        Muted = Color3.fromRGB(150, 150, 168)
+    },
+    Blue = {
+        Accent = Color3.fromRGB(45, 145, 255),
+        AccentDark = Color3.fromRGB(20, 70, 150),
+        Background = Color3.fromRGB(10, 14, 22),
+        Surface = Color3.fromRGB(16, 22, 32),
+        Element = Color3.fromRGB(23, 31, 44),
+        Stroke = Color3.fromRGB(39, 55, 78),
+        Text = Color3.fromRGB(245, 249, 255),
+        Muted = Color3.fromRGB(145, 160, 182)
+    },
+    Green = {
+        Accent = Color3.fromRGB(55, 215, 125),
+        AccentDark = Color3.fromRGB(20, 110, 65),
+        Background = Color3.fromRGB(10, 18, 14),
+        Surface = Color3.fromRGB(16, 28, 21),
+        Element = Color3.fromRGB(23, 39, 29),
+        Stroke = Color3.fromRGB(39, 67, 49),
+        Text = Color3.fromRGB(245, 255, 249),
+        Muted = Color3.fromRGB(145, 178, 158)
+    },
+    Purple = {
+        Accent = Color3.fromRGB(175, 95, 255),
+        AccentDark = Color3.fromRGB(88, 36, 150),
+        Background = Color3.fromRGB(16, 12, 22),
+        Surface = Color3.fromRGB(24, 18, 33),
+        Element = Color3.fromRGB(34, 25, 46),
+        Stroke = Color3.fromRGB(59, 43, 78),
+        Text = Color3.fromRGB(252, 247, 255),
+        Muted = Color3.fromRGB(170, 153, 188)
+    },
+    Midnight = {
+        Accent = Color3.fromRGB(100, 180, 255),
+        AccentDark = Color3.fromRGB(35, 85, 155),
+        Background = Color3.fromRGB(7, 10, 16),
+        Surface = Color3.fromRGB(12, 17, 26),
+        Element = Color3.fromRGB(18, 26, 38),
+        Stroke = Color3.fromRGB(31, 47, 67),
+        Text = Color3.fromRGB(240, 247, 255),
+        Muted = Color3.fromRGB(135, 155, 180)
+    }
+}
+
+local function copyTheme(theme)
+    local result = {}
+    for key, value in pairs(theme) do
+        result[key] = value
+    end
+    return result
+end
+
+local function resolveTheme(theme)
+    if type(theme) == "string" then
+        return themes[theme] and copyTheme(themes[theme]) or copyTheme(themes.Red)
+    end
+    if type(theme) == "table" then
+        local result = copyTheme(themes.Red)
+        for key, value in pairs(theme) do
+            if result[key] ~= nil then result[key] = value end
+        end
+        return result
+    end
+    return copyTheme(themes.Red)
+end
+
+local currentTheme = resolveTheme("Red")
+local accent      = currentTheme.Accent
+local accentDark  = currentTheme.AccentDark
+local bgDark      = currentTheme.Background
+local bgMedium    = currentTheme.Surface
+local bgLight     = currentTheme.Element
+local strokeDark  = currentTheme.Stroke
+local strokeAccent= currentTheme.Accent
+local textMain    = currentTheme.Text
+local textMuted   = currentTheme.Muted
+
+local function setCurrentTheme(theme)
+    currentTheme = resolveTheme(theme)
+    accent = currentTheme.Accent
+    accentDark = currentTheme.AccentDark
+    bgDark = currentTheme.Background
+    bgMedium = currentTheme.Surface
+    bgLight = currentTheme.Element
+    strokeDark = currentTheme.Stroke
+    strokeAccent = currentTheme.Accent
+    textMain = currentTheme.Text
+    textMuted = currentTheme.Muted
+end
+
+local function snapshotTheme()
+    return {
+        Accent = accent,
+        AccentDark = accentDark,
+        Background = bgDark,
+        Surface = bgMedium,
+        Element = bgLight,
+        Stroke = strokeDark,
+        Text = textMain,
+        Muted = textMuted
+    }
+end
+
+local function colorFor(value, oldTheme, newTheme)
+    local names = {"Accent", "AccentDark", "Background", "Surface", "Element", "Stroke", "Text", "Muted"}
+    for _, name in ipairs(names) do
+        if value == oldTheme[name] then return newTheme[name] end
+    end
+    return value
+end
+
+local function sequenceFor(sequence, oldTheme, newTheme)
+    local points = {}
+    for _, point in ipairs(sequence.Keypoints) do
+        table.insert(points, ColorSequenceKeypoint.new(point.Time, colorFor(point.Value, oldTheme, newTheme)))
+    end
+    return ColorSequence.new(points)
+end
+
+local function refreshTheme(root, oldTheme, newTheme)
+    if not root then return end
+    local objects = {root}
+    for _, object in ipairs(root:GetDescendants()) do
+        table.insert(objects, object)
+    end
+    for _, object in ipairs(objects) do
+        pcall(function()
+            if object:IsA("GuiObject") then
+                object.BackgroundColor3 = colorFor(object.BackgroundColor3, oldTheme, newTheme)
+            end
+            if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
+                object.TextColor3 = colorFor(object.TextColor3, oldTheme, newTheme)
+            end
+            if object:IsA("TextBox") then
+                object.PlaceholderColor3 = colorFor(object.PlaceholderColor3, oldTheme, newTheme)
+            end
+            if object:IsA("ImageLabel") or object:IsA("ImageButton") then
+                object.ImageColor3 = colorFor(object.ImageColor3, oldTheme, newTheme)
+            end
+            if object:IsA("UIStroke") then
+                object.Color = colorFor(object.Color, oldTheme, newTheme)
+            end
+            if object:IsA("ScrollingFrame") then
+                object.ScrollBarImageColor3 = colorFor(object.ScrollBarImageColor3, oldTheme, newTheme)
+            end
+            if object:IsA("UIGradient") then
+                object.Color = sequenceFor(object.Color, oldTheme, newTheme)
+            end
+        end)
+    end
+end
+
+local configFolder = "BloodLine"
+local memoryConfigs = {}
+local memorySettings = {}
+
+local function fileSupport()
+    return type(isfile) == "function" and type(writefile) == "function" and type(readfile) == "function"
+end
+
+local function prepareFolder()
+    if type(makefolder) == "function" and type(isfolder) == "function" then
+        if not isfolder(configFolder) then pcall(makefolder, configFolder) end
+    end
+end
+
+local function safeName(name)
+    return tostring(name or ""):gsub("[^%w_%-]", "_")
+end
+
+local function readJson(path)
+    if not fileSupport() then return nil end
+    local ok, value = pcall(function()
+        if not isfile(path) then return nil end
+        return http:JSONDecode(readfile(path))
+    end)
+    return ok and value or nil
+end
+
+local function writeJson(path, value)
+    if not fileSupport() then return false end
+    prepareFolder()
+    local ok = pcall(function() writefile(path, http:JSONEncode(value)) end)
+    return ok
+end
+
+local function configPath(name)
+    return configFolder .. "/" .. safeName(name) .. ".json"
+end
+
+local function encodeValue(value)
+    if typeof(value) == "Color3" then
+        return {__type = "Color3", r = value.R, g = value.G, b = value.B}
+    end
+    if type(value) == "table" then
+        local result = {}
+        for key, item in pairs(value) do
+            result[key] = encodeValue(item)
+        end
+        return result
+    end
+    return value
+end
+
+local function decodeValue(value)
+    if type(value) ~= "table" then return value end
+    if value.__type == "Color3" then
+        return Color3.new(value.r or 0, value.g or 0, value.b or 0)
+    end
+    local result = {}
+    for key, item in pairs(value) do
+        result[key] = decodeValue(item)
+    end
+    return result
+end
+
+local function readSettings()
+    return readJson(configFolder .. "/settings.json") or memorySettings
+end
+
+local function writeSettings(settings)
+    memorySettings = settings
+    writeJson(configFolder .. "/settings.json", settings)
+end
 
 local fastTween   = TweenInfo.new(0.12, Enum.EasingStyle.Quart,  Enum.EasingDirection.Out)
 local smoothTween = TweenInfo.new(0.25, Enum.EasingStyle.Quart,  Enum.EasingDirection.Out)
@@ -26,137 +251,6 @@ local Lucide
 pcall(function()
     Lucide = loadstring(game:HttpGet("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/icons.lua"))()
 end)
-
-local savedThemes    = {}
-local defaultTheme   = nil
-local savedConfigs   = {}
-local autoloadConfig = nil
-local allToggleRefs  = {}
-local wmFrameRef     = nil
-local wmVisibleState = true
-local themeDropdownUpdateFns = {}
-local configDropdownUpdateFns = {}
-
-local builtinThemes = {
-    ["Red (Default)"] = {
-        accent      = Color3.fromRGB(255, 35, 65),
-        accentDark  = Color3.fromRGB(130, 12, 28),
-    },
-    ["Blue"] = {
-        accent      = Color3.fromRGB(35, 120, 255),
-        accentDark  = Color3.fromRGB(12, 50, 130),
-    },
-    ["Green"] = {
-        accent      = Color3.fromRGB(35, 220, 100),
-        accentDark  = Color3.fromRGB(12, 100, 40),
-    },
-    ["Purple"] = {
-        accent      = Color3.fromRGB(160, 35, 255),
-        accentDark  = Color3.fromRGB(70, 12, 130),
-    },
-    ["Cyan"] = {
-        accent      = Color3.fromRGB(35, 220, 220),
-        accentDark  = Color3.fromRGB(12, 90, 90),
-    },
-}
-
-local function getAllThemeNames()
-    local names = {}
-    for k in pairs(builtinThemes) do table.insert(names, k) end
-    for k in pairs(savedThemes) do table.insert(names, k) end
-    table.sort(names)
-    return names
-end
-
-local function getAllConfigNames()
-    local names = {}
-    for k in pairs(savedConfigs) do table.insert(names, k) end
-    table.sort(names)
-    return names
-end
-
-function BloodLine:ApplyTheme(themeData)
-    if type(themeData) == "string" then
-        local t = builtinThemes[themeData] or savedThemes[themeData]
-        if not t then return end
-        themeData = t
-    end
-    if themeData.accent then
-        accent       = themeData.accent
-        strokeAccent = themeData.accent
-    end
-    if themeData.accentDark then
-        accentDark = themeData.accentDark
-    end
-end
-
-function BloodLine:SaveTheme(name, themeData)
-    savedThemes[name] = themeData
-    for _, fn in ipairs(themeDropdownUpdateFns) do pcall(fn, getAllThemeNames()) end
-end
-
-function BloodLine:SetDefaultTheme(name)
-    defaultTheme = name
-end
-
-function BloodLine:GetDefaultTheme()
-    return defaultTheme
-end
-
-function BloodLine:SaveConfig(name, folderPath, data)
-    savedConfigs[name] = { data = data, folder = folderPath }
-    pcall(function()
-        if not isfolder(folderPath) then makefolder(folderPath) end
-        writefile(folderPath .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(data))
-    end)
-    for _, fn in ipairs(configDropdownUpdateFns) do pcall(fn, getAllConfigNames()) end
-end
-
-function BloodLine:LoadConfig(name)
-    local entry = savedConfigs[name]
-    if not entry then return nil end
-    return entry.data
-end
-
-function BloodLine:DeleteConfig(name)
-    savedConfigs[name] = nil
-    for _, fn in ipairs(configDropdownUpdateFns) do pcall(fn, getAllConfigNames()) end
-end
-
-function BloodLine:SetAutoloadConfig(name)
-    autoloadConfig = name
-end
-
-function BloodLine:UnsetAutoloadConfig()
-    autoloadConfig = nil
-end
-
-function BloodLine:GetAutoloadConfig()
-    return autoloadConfig
-end
-
-function BloodLine:RegisterToggle(ref)
-    table.insert(allToggleRefs, ref)
-end
-
-function BloodLine:GetCurrentConfig()
-    local data = {}
-    for _, ref in ipairs(allToggleRefs) do
-        if ref.key and ref.getValue then
-            data[ref.key] = ref.getValue()
-        end
-    end
-    return data
-end
-
-function BloodLine:ApplyConfig(data)
-    if not data then return end
-    for _, ref in ipairs(allToggleRefs) do
-        if ref.key and ref.setValue and data[ref.key] ~= nil then
-            ref.setValue(data[ref.key])
-        end
-    end
-end
 
 local function ToVector2(v)
     if typeof(v) == "Vector2" then return v end
@@ -453,7 +547,20 @@ local function addToggle(parent, text, iconId, defaultState, callback)
     circle.Parent = boxBg
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
 
-    local state = defaultState or false
+    local state = defaultState == true
+
+    local function setState(nextState, silent)
+        state = nextState == true
+        boxGrad.Enabled = state
+        tween:Create(boxBg, fastTween, {BackgroundColor3 = state and Color3.fromRGB(255,255,255) or bgDark}):Play()
+        tween:Create(circle, bounceTween, {Position = state and UDim2.new(1,-10,0.5,-4) or UDim2.new(0,2,0.5,-4), BackgroundColor3 = state and textMain or textMuted}):Play()
+        stroke.Color = state and accent or strokeDark
+        tStroke.Color = state and accent or strokeDark
+        tween:Create(tIcon, fastTween, {ImageColor3 = state and accent or textMuted}):Play()
+        tween:Create(lbl, fastTween, {TextColor3 = state and textMain or textMuted}):Play()
+        if not silent and callback then callback(state) end
+    end
+
     if state then
         boxGrad.Enabled = true
         boxBg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -465,26 +572,16 @@ local function addToggle(parent, text, iconId, defaultState, callback)
         lbl.TextColor3 = textMain
     end
 
-    local function setState(val)
-        state = val
-        boxGrad.Enabled = state
-        tween:Create(boxBg,   fastTween, {BackgroundColor3 = state and Color3.fromRGB(255,255,255) or bgDark}):Play()
-        tween:Create(circle,  bounceTween, {Position = state and UDim2.new(1,-10,0.5,-4) or UDim2.new(0,2,0.5,-4), BackgroundColor3 = state and textMain or textMuted}):Play()
-        stroke.Color  = state and accent or strokeDark
-        tStroke.Color = state and accent or strokeDark
-        tween:Create(tIcon, fastTween, {ImageColor3 = state and accent or textMuted}):Play()
-        tween:Create(lbl,   fastTween, {TextColor3  = state and textMain or textMuted}):Play()
-    end
-
     btn.MouseButton1Click:Connect(function()
         setState(not state)
         Notify(text, state and "Enabled" or "Disabled", 2, iconId or "power")
-        if callback then callback(state) end
     end)
 
     return {
-        getValue = function() return state end,
-        setValue = function(v) setState(v) if callback then callback(v) end end
+        Key = text,
+        Kind = "Toggle",
+        Get = function() return state end,
+        Set = setState
     }
 end
 
@@ -549,6 +646,13 @@ local function addButton(parent, text, iconId, callback)
         Notify(text, "Action Executed", 2, iconId or "check")
         if callback then callback() end
     end)
+
+    return {
+        Key = text,
+        Kind = "Button",
+        Get = function() return nil end,
+        Set = function() end
+    }
 end
 
 local function addSlider(parent, text, min, max, iconId, callback)
@@ -629,7 +733,17 @@ local function addSlider(parent, text, min, max, iconId, callback)
     btn.Text = ""
     btn.Parent = barBg
 
+    local value = min
     local draggingSlider = false
+
+    local function setValue(nextValue, silent)
+        value = math.clamp(tonumber(nextValue) or min, min, max)
+        local position = (value - min) / (max - min)
+        fill.Size = UDim2.new(position, 0, 1, 0)
+        val.Text = tostring(math.floor(value))
+        if not silent and callback then callback(math.floor(value)) end
+    end
+
     btn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             draggingSlider = true
@@ -656,15 +770,20 @@ local function addSlider(parent, text, min, max, iconId, callback)
     uis.InputChanged:Connect(function(input)
         if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local pos = math.clamp((input.Position.X - barBg.AbsolutePosition.X) / barBg.AbsoluteSize.X, 0, 1)
-            fill.Size = UDim2.new(pos, 0, 1, 0)
-            local cur = math.floor(min + (max - min) * pos)
-            val.Text = tostring(cur)
-            if callback then callback(cur) end
+            setValue(min + (max - min) * pos)
         end
     end)
+
+    return {
+        Key = text,
+        Kind = "Slider",
+        Get = function() return math.floor(value) end,
+        Set = setValue
+    }
 end
 
-local function addDynamicDropdown(parent, text, getItems, iconId, callback)
+local function addDropdown(parent, text, items, iconId, callback)
+    items = items or {}
     local dp = Instance.new("Frame")
     dp.Size = UDim2.new(1, 0, 0, 22)
     dp.BackgroundColor3 = bgLight
@@ -727,80 +846,134 @@ local function addDynamicDropdown(parent, text, getItems, iconId, callback)
     iList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     local open = false
-    local selectedItem = nil
+    local selected
+    local currentItems = {}
+    local itemButtons = {}
+    local targetSize = 22
 
-    local function rebuild(items)
-        for _, c in ipairs(itemsCont:GetChildren()) do
-            if not c:IsA("UIListLayout") then c:Destroy() end
-        end
-        local targetSize = 22
-        for _, item in ipairs(items) do
-            local iBtn = Instance.new("TextButton")
-            iBtn.Size = UDim2.new(1, -10, 0, 18)
-            iBtn.BackgroundColor3 = bgDark
-            iBtn.AutoButtonColor = false
-            iBtn.Text = ""
-            iBtn.Parent = itemsCont
-            Instance.new("UICorner", iBtn).CornerRadius = UDim.new(0, 3)
-            local iStroke = Instance.new("UIStroke", iBtn)
-            iStroke.Color = strokeDark
-            local iText = Instance.new("TextLabel")
-            iText.Size = UDim2.new(1, -12, 1, 0)
-            iText.Position = UDim2.new(0, 6, 0, 0)
-            iText.BackgroundTransparency = 1
-            iText.Text = item
-            iText.TextColor3 = textMuted
-            iText.Font = Enum.Font.GothamMedium
-            iText.TextSize = 8
-            iText.TextXAlignment = Enum.TextXAlignment.Left
-            iText.Parent = iBtn
-            targetSize = targetSize + 21
-            iBtn.MouseEnter:Connect(function()
-                tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgMedium}):Play()
-                tween:Create(iText, fastTween, {TextColor3 = textMain}):Play()
-            end)
-            iBtn.MouseLeave:Connect(function()
-                tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgDark}):Play()
-                tween:Create(iText, fastTween, {TextColor3 = textMuted}):Play()
-            end)
-            iBtn.MouseButton1Click:Connect(function()
-                selectedItem = item
-                lbl.Text = text .. ": " .. item
-                open = false
-                tween:Create(arrow,    fastTween, {Rotation = 0}):Play()
-                tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
-                tween:Create(dIcon,    fastTween, {ImageColor3 = textMuted}):Play()
-                tween:Create(lbl,      fastTween, {TextColor3 = textMuted}):Play()
-                tween:Create(dp,       fastTween, {Size = UDim2.new(1,0,0,22)}):Play()
-                Notify(text, "Selected " .. item, 2, iconId or "list")
-                if callback then callback(item) end
-            end)
-        end
-        targetSize = targetSize + 3
-        itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 22)
-        return targetSize
+    for _, item in ipairs(items) do
+        table.insert(currentItems, item)
+        local iBtn = Instance.new("TextButton")
+        iBtn.Size = UDim2.new(1, -10, 0, 18)
+        iBtn.BackgroundColor3 = bgDark
+        iBtn.AutoButtonColor = false
+        iBtn.Text = ""
+        iBtn.Parent = itemsCont
+        Instance.new("UICorner", iBtn).CornerRadius = UDim.new(0, 3)
+
+        local iStroke = Instance.new("UIStroke", iBtn)
+        iStroke.Color = strokeDark
+
+        local iText = Instance.new("TextLabel")
+        iText.Size = UDim2.new(1, -12, 1, 0)
+        iText.Position = UDim2.new(0, 6, 0, 0)
+        iText.BackgroundTransparency = 1
+        iText.Text = item
+        iText.TextColor3 = textMuted
+        iText.Font = Enum.Font.GothamMedium
+        iText.TextSize = 8
+        iText.TextXAlignment = Enum.TextXAlignment.Left
+        iText.Parent = iBtn
+        table.insert(itemButtons, iBtn)
+
+        targetSize = targetSize + 21
+
+        iBtn.MouseEnter:Connect(function()
+            tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgMedium}):Play()
+            tween:Create(iText, fastTween, {TextColor3 = textMain}):Play()
+        end)
+        iBtn.MouseLeave:Connect(function()
+            tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgDark}):Play()
+            tween:Create(iText, fastTween, {TextColor3 = textMuted}):Play()
+        end)
+        iBtn.MouseButton1Click:Connect(function()
+            selected = item
+            lbl.Text = text .. ": " .. item
+            open = false
+            tween:Create(arrow,    fastTween, {Rotation = 0}):Play()
+            tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
+            tween:Create(dIcon,    fastTween, {ImageColor3 = textMuted}):Play()
+            tween:Create(lbl,      fastTween, {TextColor3 = textMuted}):Play()
+            tween:Create(dp,       fastTween, {Size = UDim2.new(1,0,0,22)}):Play()
+            Notify(text, "Selected " .. item, 2, iconId or "list")
+            if callback then callback(item) end
+        end)
     end
 
-    local currentTargetSize = rebuild(getItems())
+    targetSize = targetSize + 3
+    itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 22)
 
     btn.MouseButton1Click:Connect(function()
-        currentTargetSize = rebuild(getItems())
         open = not open
         tween:Create(arrow,    bounceTween, {Rotation = open and 180 or 0}):Play()
         tween:Create(dpStroke, fastTween,   {Color = open and accent or strokeDark}):Play()
         tween:Create(dIcon,    fastTween,   {ImageColor3 = open and accent or textMuted}):Play()
         tween:Create(lbl,      fastTween,   {TextColor3 = open and textMain or textMuted}):Play()
-        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and currentTargetSize or 22)}):Play()
+        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 22)}):Play()
     end)
 
-    return {
-        getSelected = function() return selectedItem end,
-        refresh = function() currentTargetSize = rebuild(getItems()) end
-    }
-end
+    local function setValue(value, silent)
+        for _, item in ipairs(currentItems) do
+            if item == value then
+                selected = value
+                lbl.Text = text .. ": " .. tostring(value)
+                if not silent and callback then callback(value) end
+                return true
+            end
+        end
+        return false
+    end
 
-local function addDropdown(parent, text, items, iconId, callback)
-    return addDynamicDropdown(parent, text, function() return items end, iconId, callback)
+    local function setItems(nextItems)
+        local template = itemButtons[1]
+        if not template then return end
+        template = template:Clone()
+        for _, child in ipairs(itemsCont:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        currentItems = nextItems or {}
+        itemButtons = {}
+        selected = nil
+        targetSize = 22
+        for _, item in ipairs(currentItems) do
+            local iBtn = template:Clone()
+            iBtn.Parent = itemsCont
+            local iText = iBtn:FindFirstChildWhichIsA("TextLabel")
+            if iText then iText.Text = tostring(item) end
+            local iStroke = iBtn:FindFirstChildWhichIsA("UIStroke")
+            table.insert(itemButtons, iBtn)
+            targetSize = targetSize + 21
+            iBtn.MouseEnter:Connect(function()
+                tween:Create(iBtn, fastTween, {BackgroundColor3 = bgMedium}):Play()
+                if iText then tween:Create(iText, fastTween, {TextColor3 = textMain}):Play() end
+            end)
+            iBtn.MouseLeave:Connect(function()
+                tween:Create(iBtn, fastTween, {BackgroundColor3 = bgDark}):Play()
+                if iText then tween:Create(iText, fastTween, {TextColor3 = textMuted}):Play() end
+            end)
+            iBtn.MouseButton1Click:Connect(function()
+                setValue(item)
+                open = false
+                tween:Create(arrow, fastTween, {Rotation = 0}):Play()
+                tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
+                tween:Create(dIcon, fastTween, {ImageColor3 = textMuted}):Play()
+                tween:Create(lbl, fastTween, {TextColor3 = textMuted}):Play()
+                tween:Create(dp, fastTween, {Size = UDim2.new(1, 0, 0, 22)}):Play()
+                Notify(text, "Selected " .. tostring(item), 2, iconId or "list")
+            end)
+        end
+        targetSize = targetSize + 3
+        itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 22)
+    end
+
+    return {
+        Key = text,
+        Kind = "Dropdown",
+        Get = function() return selected end,
+        Set = setValue,
+        SetItems = setItems,
+        GetItems = function() return currentItems end
+    }
 end
 
 local function addMultiDropdown(parent, text, items, iconId, callback)
@@ -869,13 +1042,13 @@ local function addMultiDropdown(parent, text, items, iconId, callback)
     local open = false
     local targetSize = 22
 
-    local function updateText()
+    local function updateText(silent)
         local list = {}
         for item, st in pairs(selected) do
             if st then table.insert(list, item) end
         end
         lbl.Text = text .. ": " .. (#list == 0 and "None" or table.concat(list, ", "))
-        if callback then callback(selected) end
+        if not silent and callback then callback(selected) end
     end
 
     for _, item in ipairs(items) do
@@ -934,6 +1107,39 @@ local function addMultiDropdown(parent, text, items, iconId, callback)
         tween:Create(lbl,      fastTween,   {TextColor3 = open and textMain or textMuted}):Play()
         tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 22)}):Play()
     end)
+
+    local function setValues(values, silent)
+        for item in pairs(selected) do selected[item] = false end
+        if type(values) == "table" then
+            for item, state in pairs(values) do
+                if selected[item] ~= nil then selected[item] = state == true end
+            end
+        end
+        for _, itemButton in ipairs(itemsCont:GetChildren()) do
+            if itemButton:IsA("TextButton") then
+                local itemText = itemButton:FindFirstChildWhichIsA("TextLabel")
+                local name = itemText and itemText.Text
+                local itemState = name and selected[name] == true
+                local itemStroke = itemButton:FindFirstChildWhichIsA("UIStroke")
+                local dot = itemButton:FindFirstChildWhichIsA("Frame")
+                if itemStroke then itemStroke.Color = itemState and accent or strokeDark end
+                if itemText then itemText.TextColor3 = itemState and textMain or textMuted end
+                if dot and dot ~= itemButton then dot.BackgroundTransparency = itemState and 0 or 1 end
+            end
+        end
+        updateText(silent)
+    end
+
+    return {
+        Key = text,
+        Kind = "MultiDropdown",
+        Get = function()
+            local result = {}
+            for item, state in pairs(selected) do result[item] = state end
+            return result
+        end,
+        Set = setValues
+    }
 end
 
 local function addColorpicker(parent, text, defaultColor, iconId, callback)
@@ -1054,14 +1260,14 @@ local function addColorpicker(parent, text, defaultColor, iconId, callback)
 
     local h, s, v = Color3.toHSV(defaultColor or accent)
 
-    local function updateColor()
+    local function updateColor(silent)
         local color = Color3.fromHSV(h, s, v)
         satValCanvas.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
         preview.BackgroundColor3 = color
         rgbDisplay.BackgroundColor3 = color
         rgbDisplay.Text = string.format("rgb(%d, %d, %d)", math.floor(color.R*255), math.floor(color.G*255), math.floor(color.B*255))
         hexInput.Text = "#" .. color:ToHex():upper()
-        if callback then callback(color) end
+        if not silent and callback then callback(color) end
     end
     updateColor()
 
@@ -1121,6 +1327,20 @@ local function addColorpicker(parent, text, defaultColor, iconId, callback)
         tween:Create(lbl,      fastTween, {TextColor3 = open and textMain or textMuted}):Play()
         tween:Create(cp,       fastTween, {Size = UDim2.new(1,0,0, open and 158 or 22)}):Play()
     end)
+
+    return {
+        Key = text,
+        Kind = "Colorpicker",
+        Get = function() return Color3.fromHSV(h, s, v) end,
+        Set = function(value, silent)
+            if typeof(value) ~= "Color3" then return false end
+            h, s, v = Color3.toHSV(value)
+            cursor.Position = UDim2.new(s, 0, 1 - v, 0)
+            hueBar.Position = UDim2.new(0, -1, 1 - h, 0)
+            updateColor(silent)
+            return true
+        end
+    }
 end
 
 local function addTextBox(parent, text, placeholder, iconId, callback)
@@ -1190,7 +1410,15 @@ local function addTextBox(parent, text, placeholder, iconId, callback)
         end
     end)
 
-    return box
+    return {
+        Key = text,
+        Kind = "TextBox",
+        Get = function() return box.Text end,
+        Set = function(value, silent)
+            box.Text = tostring(value or "")
+            if not silent and callback then callback(box.Text) end
+        end
+    }
 end
 
 local function addKeybind(parent, text, defaultKey, iconId, callback)
@@ -1255,51 +1483,66 @@ local function addKeybind(parent, text, defaultKey, iconId, callback)
             if callback then callback(key) end
         end
     end)
+
+    return {
+        Key = text,
+        Kind = "Keybind",
+        Get = function() return bindBtn.Text end,
+        Set = function(value, silent)
+            bindBtn.Text = tostring(value or "NONE")
+            if not silent and callback then callback(bindBtn.Text) end
+        end
+    }
 end
 
-local function makeGroupBoxObject(container)
+local function makeGroupBoxObject(container, window, tab)
     local GB = {}
 
     function GB:AddToggle(text, icon, default, callback)
-        addToggle(container, text, icon, default, callback)
+        local control = addToggle(container, text, icon, default, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
     function GB:AddButton(text, icon, callback)
-        addButton(container, text, icon, callback)
+        local control = addButton(container, text, icon, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
     function GB:AddSlider(text, min, max, icon, callback)
-        addSlider(container, text, min, max, icon, callback)
+        local control = addSlider(container, text, min, max, icon, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
     function GB:AddDropdown(text, items, icon, callback)
-        addDropdown(container, text, items, icon, callback)
+        local control = addDropdown(container, text, items, icon, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
-    function GB:AddDynamicDropdown(text, getItems, icon, callback)
-        return addDynamicDropdown(container, text, getItems, icon, callback)
-    end
-
     function GB:AddMultiDropdown(text, items, icon, callback)
-        addMultiDropdown(container, text, items, icon, callback)
+        local control = addMultiDropdown(container, text, items, icon, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
     function GB:AddColorpicker(text, default, icon, callback)
-        addColorpicker(container, text, default, icon, callback)
+        local control = addColorpicker(container, text, default, icon, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
     function GB:AddTextBox(text, placeholder, icon, callback)
-        return addTextBox(container, text, placeholder, icon, callback)
+        local control = addTextBox(container, text, placeholder, icon, callback)
+        if window then window:_registerControl(control, tab) end
+        return GB
     end
 
     function GB:AddKeybind(text, defaultKey, icon, callback)
-        addKeybind(container, text, defaultKey, icon, callback)
+        local control = addKeybind(container, text, defaultKey, icon, callback)
+        if window then window:_registerControl(control, tab) end
         return GB
     end
 
@@ -1308,19 +1551,12 @@ local function makeGroupBoxObject(container)
         return GB
     end
 
-    function GB:AddRawToggle(text, icon, default, callback)
-        return addToggle(container, text, icon, default, callback)
-    end
-
-    function GB:AddButton2(text, icon, callback)
-        addButton(container, text, icon, callback)
-    end
-
     return GB
 end
 
 function BloodLine:CreateWindow(config)
     config = config or {}
+    if config.Theme then setCurrentTheme(config.Theme) end
     local windowTitle  = config.Title  or "BloodLine"
     local windowFooter = config.Footer or "BloodLine UI"
     local windowLogo   = config.Logo   or "rbxassetid://13848130837"
@@ -1344,7 +1580,6 @@ function BloodLine:CreateWindow(config)
     wmFrame.BackgroundColor3 = bgDark
     wmFrame.Parent = ui
     Instance.new("UICorner", wmFrame).CornerRadius = UDim.new(0, 6)
-    wmFrameRef = wmFrame
 
     local wmStroke = Instance.new("UIStroke", wmFrame)
     wmStroke.Color = strokeAccent
@@ -1388,8 +1623,8 @@ function BloodLine:CreateWindow(config)
     wmText.AutomaticSize = Enum.AutomaticSize.X
     wmText.Size = UDim2.new(0, 0, 1, 0)
     wmText.BackgroundTransparency = 1
-    wmText.Text = '<font color="rgb(255,35,65)">' .. string.upper(windowTitle) .. '</font> <font color="rgb(150,150,168)">|</font> ' .. string.upper(lp.Name)
-    wmText.RichText = true
+    wmText.Text = string.upper(windowTitle) .. " | " .. string.upper(lp.Name)
+    wmText.RichText = false
     wmText.TextColor3 = textMain
     wmText.Font = Enum.Font.GothamBold
     wmText.TextSize = 9
@@ -1401,8 +1636,8 @@ function BloodLine:CreateWindow(config)
     wmStats.AutomaticSize = Enum.AutomaticSize.X
     wmStats.Size = UDim2.new(0, 0, 1, 0)
     wmStats.BackgroundTransparency = 1
-    wmStats.Text = '<font color="rgb(150,150,168)">|</font> <font color="rgb(255,35,65)">60</font> FPS'
-    wmStats.RichText = true
+    wmStats.Text = "| 60 FPS"
+    wmStats.RichText = false
     wmStats.TextColor3 = textMain
     wmStats.Font = Enum.Font.GothamBold
     wmStats.TextSize = 9
@@ -1416,7 +1651,7 @@ function BloodLine:CreateWindow(config)
         if fpsTimer >= 0.25 then
             fpsTimer = 0
             local fps = math.floor(1 / dt)
-            wmStats.Text = '<font color="rgb(150,150,168)">|</font> <font color="rgb(255,35,65)">' .. fps .. '</font> FPS'
+            wmStats.Text = "| " .. fps .. " FPS"
         end
     end)
 
@@ -1531,8 +1766,8 @@ function BloodLine:CreateWindow(config)
     titleLbl.Size = UDim2.new(0, 130, 1, 0)
     titleLbl.Position = UDim2.new(0, 34, 0, 0)
     titleLbl.BackgroundTransparency = 1
-    titleLbl.Text = '<font color="rgb(255,35,65)">' .. string.upper(windowTitle) .. '</font>'
-    titleLbl.RichText = true
+    titleLbl.Text = string.upper(windowTitle)
+    titleLbl.RichText = false
     titleLbl.TextColor3 = textMain
     titleLbl.Font = Enum.Font.GothamBlack
     titleLbl.TextSize = 13
@@ -1629,19 +1864,186 @@ function BloodLine:CreateWindow(config)
     end)
 
     local tabRegistry = {}
+    local controls = {}
+    local windowThemeName = config.Theme or "Red"
     local firstTab = true
 
     local Window = {}
 
-    function Window:Notify(t, d, dur, icon)
-        Notify(t, d, dur, icon)
+    function Window:_registerControl(control, tab)
+        if not control then return end
+        control.Tab = tab
+        table.insert(controls, control)
     end
 
-    function Window:SetWatermarkVisible(visible)
-        wmVisibleState = visible
-        if wmFrameRef then
-            wmFrameRef.Visible = visible
+    function Window:GetControl(key)
+        for index = #controls, 1, -1 do
+            if controls[index].Key == key then return controls[index] end
         end
+    end
+
+    function Window:GetThemeNames()
+        local names = {}
+        for name in pairs(themes) do table.insert(names, name) end
+        table.sort(names)
+        return names
+    end
+
+    function Window:ApplyTheme(theme, targetTab, setDefault)
+        local nextTheme = resolveTheme(theme)
+        if targetTab and targetTab._entry then
+            local entry = targetTab._entry
+            local oldTheme = entry.theme or snapshotTheme()
+            refreshTheme(entry.frame, oldTheme, nextTheme)
+            entry.theme = nextTheme
+            entry.themeName = type(theme) == "string" and theme or nil
+            if setDefault and type(theme) == "string" then self:SetDefaultTheme(theme) end
+            return entry.themeName
+        end
+        local oldTheme = snapshotTheme()
+        setCurrentTheme(nextTheme)
+        windowThemeName = type(theme) == "string" and theme or windowThemeName
+        refreshTheme(ui, oldTheme, nextTheme)
+        wmBar.BackgroundColor3 = accent
+        wmIcon.ImageColor3 = accent
+        wmText.TextColor3 = textMain
+        wmStats.TextColor3 = accent
+        tGlow.Color = accent
+        tBtnIcon.ImageColor3 = accent
+        mStroke.Color = strokeAccent
+        fText.TextColor3 = accent
+        titleIcon.ImageColor3 = accent
+        titleLbl.TextColor3 = accent
+        for _, entry in ipairs(tabRegistry) do
+            entry.theme = nextTheme
+            entry.themeName = windowThemeName
+        end
+        if setDefault then self:SetDefaultTheme(type(theme) == "string" and theme or windowThemeName) end
+        return windowThemeName
+    end
+
+    function Window:SetDefaultTheme(theme)
+        if type(theme) ~= "string" or not themes[theme] then return false end
+        local settings = readSettings()
+        settings.DefaultTheme = theme
+        writeSettings(settings)
+        return true
+    end
+
+    function Window:GetDefaultTheme()
+        return readSettings().DefaultTheme
+    end
+
+    function Window:_collectConfig()
+        local values = {}
+        for _, control in ipairs(controls) do
+            if control.Kind ~= "Button" and control.Get then
+                values[control.Key] = encodeValue(control.Get())
+            end
+        end
+        return {
+            Theme = encodeValue(currentTheme),
+            Controls = values
+        }
+    end
+
+    function Window:GetConfigNames()
+        local names = {}
+        if type(listfiles) == "function" and fileSupport() then
+            prepareFolder()
+            local ok, files = pcall(listfiles, configFolder)
+            if ok and type(files) == "table" then
+                for _, path in ipairs(files) do
+                    local name = tostring(path):match("([^/\\]+)%.json$")
+                    if name and name ~= "settings" then table.insert(names, name) end
+                end
+            end
+        end
+        for name in pairs(memoryConfigs) do
+            local found = false
+            for _, current in ipairs(names) do
+                if current == name then found = true break end
+            end
+            if not found then table.insert(names, name) end
+        end
+        table.sort(names)
+        return names
+    end
+
+    function Window:SaveConfig(name, overwrite)
+        name = tostring(name or ""):match("^%s*(.-)%s*$")
+        if name == "" then return false, "Config name is empty" end
+        local existing = readJson(configPath(name)) or memoryConfigs[name]
+        if existing and not overwrite then return false, "Config already exists" end
+        local data = self:_collectConfig()
+        memoryConfigs[name] = data
+        if fileSupport() then writeJson(configPath(name), data) end
+        return true
+    end
+
+    function Window:OverwriteConfig(name)
+        return self:SaveConfig(name, true)
+    end
+
+    function Window:LoadConfig(name)
+        local data = readJson(configPath(name)) or memoryConfigs[name]
+        if not data then return false, "Config not found" end
+        return self:ApplyConfig(data)
+    end
+
+    function Window:ApplyConfig(configData)
+        local data = configData
+        if type(configData) == "string" then
+            data = readJson(configPath(configData)) or memoryConfigs[configData]
+        end
+        if type(data) ~= "table" then return false, "Invalid config" end
+        if data.Theme then self:ApplyTheme(decodeValue(data.Theme)) end
+        for _, control in ipairs(controls) do
+            local value = data.Controls and data.Controls[control.Key]
+            if value ~= nil and control.Set then control.Set(decodeValue(value), false) end
+        end
+        return true
+    end
+
+    function Window:SetAutoLoad(name)
+        name = tostring(name or "")
+        if name == "" then return false end
+        if not (readJson(configPath(name)) or memoryConfigs[name]) then return false end
+        local settings = readSettings()
+        settings.AutoLoad = name
+        writeSettings(settings)
+        return true
+    end
+
+    function Window:UnsetAutoLoad()
+        local settings = readSettings()
+        settings.AutoLoad = nil
+        writeSettings(settings)
+        return true
+    end
+
+    function Window:GetAutoLoad()
+        return readSettings().AutoLoad
+    end
+
+    function Window:SetWatermarkVisible(state)
+        wmFrame.Visible = state == true
+        return wmFrame.Visible
+    end
+
+    function Window:DeleteConfig(name)
+        memoryConfigs[name] = nil
+        if fileSupport() and type(delfile) == "function" then
+            pcall(function()
+                if isfile(configPath(name)) then delfile(configPath(name)) end
+            end)
+        end
+        if self:GetAutoLoad() == name then self:UnsetAutoLoad() end
+        return true
+    end
+
+    function Window:Notify(t, d, dur, icon)
+        Notify(t, d, dur, icon)
     end
 
     function Window:CreateTab(name, iconId)
@@ -1703,7 +2105,7 @@ function BloodLine:CreateWindow(config)
         tabFrame.Visible = isFirst
         tabFrame.Parent = contentContainer
 
-        local entry = {btn = tabBtn, lbl = tabLbl, icon = tabIcon, frame = tabFrame, stroke = tbStroke, grad = btnGrad}
+        local entry = {btn = tabBtn, lbl = tabLbl, icon = tabIcon, frame = tabFrame, stroke = tbStroke, grad = btnGrad, theme = snapshotTheme()}
         table.insert(tabRegistry, entry)
 
         local hLayout = Instance.new("UIListLayout", tabFrame)
@@ -1776,20 +2178,36 @@ function BloodLine:CreateWindow(config)
         end)
 
         local Tab = {}
+        Tab._entry = entry
+
+        function Tab:ApplyTheme(theme, setDefault)
+            return Window:ApplyTheme(theme, self, setDefault)
+        end
 
         function Tab:LeftGroup(title)
             local container = addGroupBox(leftScroll, title)
-            return makeGroupBoxObject(container)
+            return makeGroupBoxObject(container, Window, Tab)
         end
 
         function Tab:RightGroup(title)
             local container = addGroupBox(rightScroll, title)
-            return makeGroupBoxObject(container)
+            return makeGroupBoxObject(container, Window, Tab)
         end
 
         return Tab
     end
 
+    local settings = readSettings()
+    if settings.DefaultTheme and themes[settings.DefaultTheme] then
+        Window:ApplyTheme(settings.DefaultTheme)
+    end
+    if settings.AutoLoad then
+        task.defer(function()
+            Window:ApplyConfig(settings.AutoLoad)
+        end)
+    end
+
+    BloodLine._activeWindow = Window
     Notify(windowTitle, "UI Loaded", 4, "shield-check")
 
     return Window
@@ -1799,29 +2217,26 @@ function BloodLine:Notify(title, desc, duration, icon)
     Notify(title, desc, duration, icon)
 end
 
-function BloodLine:GetBuiltinThemes()
-    return builtinThemes
+function BloodLine:ApplyTheme(theme, targetTab, setDefault)
+    if self._activeWindow then
+        return self._activeWindow:ApplyTheme(theme, targetTab, setDefault)
+    end
+    setCurrentTheme(theme)
+    return type(theme) == "string" and theme or "Red"
 end
 
-function BloodLine:GetSavedThemes()
-    return savedThemes
+function BloodLine:ApplyConfig(configData)
+    if self._activeWindow then
+        return self._activeWindow:ApplyConfig(configData)
+    end
+    return false, "No active window"
 end
 
-function BloodLine:RegisterThemeDropdownUpdate(fn)
-    table.insert(themeDropdownUpdateFns, fn)
-end
-
-function BloodLine:RegisterConfigDropdownUpdate(fn)
-    table.insert(configDropdownUpdateFns, fn)
-end
-
-function BloodLine:GetAllThemeNames()
-    return getAllThemeNames()
-end
-
-function BloodLine:GetAllConfigNames()
-    return getAllConfigNames()
+function BloodLine:GetThemes()
+    local names = {}
+    for name in pairs(themes) do table.insert(names, name) end
+    table.sort(names)
+    return names
 end
 
 return BloodLine
-
