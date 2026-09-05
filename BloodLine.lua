@@ -27,6 +27,137 @@ pcall(function()
     Lucide = loadstring(game:HttpGet("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/icons.lua"))()
 end)
 
+local savedThemes    = {}
+local defaultTheme   = nil
+local savedConfigs   = {}
+local autoloadConfig = nil
+local allToggleRefs  = {}
+local wmFrameRef     = nil
+local wmVisibleState = true
+local themeDropdownUpdateFns = {}
+local configDropdownUpdateFns = {}
+
+local builtinThemes = {
+    ["Red (Default)"] = {
+        accent      = Color3.fromRGB(255, 35, 65),
+        accentDark  = Color3.fromRGB(130, 12, 28),
+    },
+    ["Blue"] = {
+        accent      = Color3.fromRGB(35, 120, 255),
+        accentDark  = Color3.fromRGB(12, 50, 130),
+    },
+    ["Green"] = {
+        accent      = Color3.fromRGB(35, 220, 100),
+        accentDark  = Color3.fromRGB(12, 100, 40),
+    },
+    ["Purple"] = {
+        accent      = Color3.fromRGB(160, 35, 255),
+        accentDark  = Color3.fromRGB(70, 12, 130),
+    },
+    ["Cyan"] = {
+        accent      = Color3.fromRGB(35, 220, 220),
+        accentDark  = Color3.fromRGB(12, 90, 90),
+    },
+}
+
+local function getAllThemeNames()
+    local names = {}
+    for k in pairs(builtinThemes) do table.insert(names, k) end
+    for k in pairs(savedThemes) do table.insert(names, k) end
+    table.sort(names)
+    return names
+end
+
+local function getAllConfigNames()
+    local names = {}
+    for k in pairs(savedConfigs) do table.insert(names, k) end
+    table.sort(names)
+    return names
+end
+
+function BloodLine:ApplyTheme(themeData)
+    if type(themeData) == "string" then
+        local t = builtinThemes[themeData] or savedThemes[themeData]
+        if not t then return end
+        themeData = t
+    end
+    if themeData.accent then
+        accent       = themeData.accent
+        strokeAccent = themeData.accent
+    end
+    if themeData.accentDark then
+        accentDark = themeData.accentDark
+    end
+end
+
+function BloodLine:SaveTheme(name, themeData)
+    savedThemes[name] = themeData
+    for _, fn in ipairs(themeDropdownUpdateFns) do pcall(fn, getAllThemeNames()) end
+end
+
+function BloodLine:SetDefaultTheme(name)
+    defaultTheme = name
+end
+
+function BloodLine:GetDefaultTheme()
+    return defaultTheme
+end
+
+function BloodLine:SaveConfig(name, folderPath, data)
+    savedConfigs[name] = { data = data, folder = folderPath }
+    pcall(function()
+        if not isfolder(folderPath) then makefolder(folderPath) end
+        writefile(folderPath .. "/" .. name .. ".json", game:GetService("HttpService"):JSONEncode(data))
+    end)
+    for _, fn in ipairs(configDropdownUpdateFns) do pcall(fn, getAllConfigNames()) end
+end
+
+function BloodLine:LoadConfig(name)
+    local entry = savedConfigs[name]
+    if not entry then return nil end
+    return entry.data
+end
+
+function BloodLine:DeleteConfig(name)
+    savedConfigs[name] = nil
+    for _, fn in ipairs(configDropdownUpdateFns) do pcall(fn, getAllConfigNames()) end
+end
+
+function BloodLine:SetAutoloadConfig(name)
+    autoloadConfig = name
+end
+
+function BloodLine:UnsetAutoloadConfig()
+    autoloadConfig = nil
+end
+
+function BloodLine:GetAutoloadConfig()
+    return autoloadConfig
+end
+
+function BloodLine:RegisterToggle(ref)
+    table.insert(allToggleRefs, ref)
+end
+
+function BloodLine:GetCurrentConfig()
+    local data = {}
+    for _, ref in ipairs(allToggleRefs) do
+        if ref.key and ref.getValue then
+            data[ref.key] = ref.getValue()
+        end
+    end
+    return data
+end
+
+function BloodLine:ApplyConfig(data)
+    if not data then return end
+    for _, ref in ipairs(allToggleRefs) do
+        if ref.key and ref.setValue and data[ref.key] ~= nil then
+            ref.setValue(data[ref.key])
+        end
+    end
+end
+
 local function ToVector2(v)
     if typeof(v) == "Vector2" then return v end
     if type(v) == "table" then return Vector2.new(v[1] or v.X or 0, v[2] or v.Y or 0) end
@@ -334,8 +465,8 @@ local function addToggle(parent, text, iconId, defaultState, callback)
         lbl.TextColor3 = textMain
     end
 
-    btn.MouseButton1Click:Connect(function()
-        state = not state
+    local function setState(val)
+        state = val
         boxGrad.Enabled = state
         tween:Create(boxBg,   fastTween, {BackgroundColor3 = state and Color3.fromRGB(255,255,255) or bgDark}):Play()
         tween:Create(circle,  bounceTween, {Position = state and UDim2.new(1,-10,0.5,-4) or UDim2.new(0,2,0.5,-4), BackgroundColor3 = state and textMain or textMuted}):Play()
@@ -343,9 +474,18 @@ local function addToggle(parent, text, iconId, defaultState, callback)
         tStroke.Color = state and accent or strokeDark
         tween:Create(tIcon, fastTween, {ImageColor3 = state and accent or textMuted}):Play()
         tween:Create(lbl,   fastTween, {TextColor3  = state and textMain or textMuted}):Play()
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        setState(not state)
         Notify(text, state and "Enabled" or "Disabled", 2, iconId or "power")
         if callback then callback(state) end
     end)
+
+    return {
+        getValue = function() return state end,
+        setValue = function(v) setState(v) if callback then callback(v) end end
+    }
 end
 
 local function addButton(parent, text, iconId, callback)
@@ -524,7 +664,7 @@ local function addSlider(parent, text, min, max, iconId, callback)
     end)
 end
 
-local function addDropdown(parent, text, items, iconId, callback)
+local function addDynamicDropdown(parent, text, getItems, iconId, callback)
     local dp = Instance.new("Frame")
     dp.Size = UDim2.new(1, 0, 0, 22)
     dp.BackgroundColor3 = bgLight
@@ -587,65 +727,80 @@ local function addDropdown(parent, text, items, iconId, callback)
     iList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     local open = false
-    local targetSize = 22
+    local selectedItem = nil
 
-    for _, item in ipairs(items) do
-        local iBtn = Instance.new("TextButton")
-        iBtn.Size = UDim2.new(1, -10, 0, 18)
-        iBtn.BackgroundColor3 = bgDark
-        iBtn.AutoButtonColor = false
-        iBtn.Text = ""
-        iBtn.Parent = itemsCont
-        Instance.new("UICorner", iBtn).CornerRadius = UDim.new(0, 3)
-
-        local iStroke = Instance.new("UIStroke", iBtn)
-        iStroke.Color = strokeDark
-
-        local iText = Instance.new("TextLabel")
-        iText.Size = UDim2.new(1, -12, 1, 0)
-        iText.Position = UDim2.new(0, 6, 0, 0)
-        iText.BackgroundTransparency = 1
-        iText.Text = item
-        iText.TextColor3 = textMuted
-        iText.Font = Enum.Font.GothamMedium
-        iText.TextSize = 8
-        iText.TextXAlignment = Enum.TextXAlignment.Left
-        iText.Parent = iBtn
-
-        targetSize = targetSize + 21
-
-        iBtn.MouseEnter:Connect(function()
-            tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgMedium}):Play()
-            tween:Create(iText, fastTween, {TextColor3 = textMain}):Play()
-        end)
-        iBtn.MouseLeave:Connect(function()
-            tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgDark}):Play()
-            tween:Create(iText, fastTween, {TextColor3 = textMuted}):Play()
-        end)
-        iBtn.MouseButton1Click:Connect(function()
-            lbl.Text = text .. ": " .. item
-            open = false
-            tween:Create(arrow,    fastTween, {Rotation = 0}):Play()
-            tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
-            tween:Create(dIcon,    fastTween, {ImageColor3 = textMuted}):Play()
-            tween:Create(lbl,      fastTween, {TextColor3 = textMuted}):Play()
-            tween:Create(dp,       fastTween, {Size = UDim2.new(1,0,0,22)}):Play()
-            Notify(text, "Selected " .. item, 2, iconId or "list")
-            if callback then callback(item) end
-        end)
+    local function rebuild(items)
+        for _, c in ipairs(itemsCont:GetChildren()) do
+            if not c:IsA("UIListLayout") then c:Destroy() end
+        end
+        local targetSize = 22
+        for _, item in ipairs(items) do
+            local iBtn = Instance.new("TextButton")
+            iBtn.Size = UDim2.new(1, -10, 0, 18)
+            iBtn.BackgroundColor3 = bgDark
+            iBtn.AutoButtonColor = false
+            iBtn.Text = ""
+            iBtn.Parent = itemsCont
+            Instance.new("UICorner", iBtn).CornerRadius = UDim.new(0, 3)
+            local iStroke = Instance.new("UIStroke", iBtn)
+            iStroke.Color = strokeDark
+            local iText = Instance.new("TextLabel")
+            iText.Size = UDim2.new(1, -12, 1, 0)
+            iText.Position = UDim2.new(0, 6, 0, 0)
+            iText.BackgroundTransparency = 1
+            iText.Text = item
+            iText.TextColor3 = textMuted
+            iText.Font = Enum.Font.GothamMedium
+            iText.TextSize = 8
+            iText.TextXAlignment = Enum.TextXAlignment.Left
+            iText.Parent = iBtn
+            targetSize = targetSize + 21
+            iBtn.MouseEnter:Connect(function()
+                tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgMedium}):Play()
+                tween:Create(iText, fastTween, {TextColor3 = textMain}):Play()
+            end)
+            iBtn.MouseLeave:Connect(function()
+                tween:Create(iBtn,  fastTween, {BackgroundColor3 = bgDark}):Play()
+                tween:Create(iText, fastTween, {TextColor3 = textMuted}):Play()
+            end)
+            iBtn.MouseButton1Click:Connect(function()
+                selectedItem = item
+                lbl.Text = text .. ": " .. item
+                open = false
+                tween:Create(arrow,    fastTween, {Rotation = 0}):Play()
+                tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
+                tween:Create(dIcon,    fastTween, {ImageColor3 = textMuted}):Play()
+                tween:Create(lbl,      fastTween, {TextColor3 = textMuted}):Play()
+                tween:Create(dp,       fastTween, {Size = UDim2.new(1,0,0,22)}):Play()
+                Notify(text, "Selected " .. item, 2, iconId or "list")
+                if callback then callback(item) end
+            end)
+        end
+        targetSize = targetSize + 3
+        itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 22)
+        return targetSize
     end
 
-    targetSize = targetSize + 3
-    itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 22)
+    local currentTargetSize = rebuild(getItems())
 
     btn.MouseButton1Click:Connect(function()
+        currentTargetSize = rebuild(getItems())
         open = not open
         tween:Create(arrow,    bounceTween, {Rotation = open and 180 or 0}):Play()
         tween:Create(dpStroke, fastTween,   {Color = open and accent or strokeDark}):Play()
         tween:Create(dIcon,    fastTween,   {ImageColor3 = open and accent or textMuted}):Play()
         tween:Create(lbl,      fastTween,   {TextColor3 = open and textMain or textMuted}):Play()
-        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 22)}):Play()
+        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and currentTargetSize or 22)}):Play()
     end)
+
+    return {
+        getSelected = function() return selectedItem end,
+        refresh = function() currentTargetSize = rebuild(getItems()) end
+    }
+end
+
+local function addDropdown(parent, text, items, iconId, callback)
+    return addDynamicDropdown(parent, text, function() return items end, iconId, callback)
 end
 
 local function addMultiDropdown(parent, text, items, iconId, callback)
@@ -1034,6 +1189,8 @@ local function addTextBox(parent, text, placeholder, iconId, callback)
             if callback then callback(box.Text) end
         end
     end)
+
+    return box
 end
 
 local function addKeybind(parent, text, defaultKey, iconId, callback)
@@ -1123,6 +1280,10 @@ local function makeGroupBoxObject(container)
         return GB
     end
 
+    function GB:AddDynamicDropdown(text, getItems, icon, callback)
+        return addDynamicDropdown(container, text, getItems, icon, callback)
+    end
+
     function GB:AddMultiDropdown(text, items, icon, callback)
         addMultiDropdown(container, text, items, icon, callback)
         return GB
@@ -1134,8 +1295,7 @@ local function makeGroupBoxObject(container)
     end
 
     function GB:AddTextBox(text, placeholder, icon, callback)
-        addTextBox(container, text, placeholder, icon, callback)
-        return GB
+        return addTextBox(container, text, placeholder, icon, callback)
     end
 
     function GB:AddKeybind(text, defaultKey, icon, callback)
@@ -1146,6 +1306,14 @@ local function makeGroupBoxObject(container)
     function GB:AddLabel(text, icon)
         addLabel(container, text, icon)
         return GB
+    end
+
+    function GB:AddRawToggle(text, icon, default, callback)
+        return addToggle(container, text, icon, default, callback)
+    end
+
+    function GB:AddButton2(text, icon, callback)
+        addButton(container, text, icon, callback)
     end
 
     return GB
@@ -1176,6 +1344,7 @@ function BloodLine:CreateWindow(config)
     wmFrame.BackgroundColor3 = bgDark
     wmFrame.Parent = ui
     Instance.new("UICorner", wmFrame).CornerRadius = UDim.new(0, 6)
+    wmFrameRef = wmFrame
 
     local wmStroke = Instance.new("UIStroke", wmFrame)
     wmStroke.Color = strokeAccent
@@ -1468,6 +1637,13 @@ function BloodLine:CreateWindow(config)
         Notify(t, d, dur, icon)
     end
 
+    function Window:SetWatermarkVisible(visible)
+        wmVisibleState = visible
+        if wmFrameRef then
+            wmFrameRef.Visible = visible
+        end
+    end
+
     function Window:CreateTab(name, iconId)
         local isFirst = firstTab
         firstTab = false
@@ -1623,4 +1799,29 @@ function BloodLine:Notify(title, desc, duration, icon)
     Notify(title, desc, duration, icon)
 end
 
+function BloodLine:GetBuiltinThemes()
+    return builtinThemes
+end
+
+function BloodLine:GetSavedThemes()
+    return savedThemes
+end
+
+function BloodLine:RegisterThemeDropdownUpdate(fn)
+    table.insert(themeDropdownUpdateFns, fn)
+end
+
+function BloodLine:RegisterConfigDropdownUpdate(fn)
+    table.insert(configDropdownUpdateFns, fn)
+end
+
+function BloodLine:GetAllThemeNames()
+    return getAllThemeNames()
+end
+
+function BloodLine:GetAllConfigNames()
+    return getAllConfigNames()
+end
+
 return BloodLine
+
