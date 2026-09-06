@@ -294,30 +294,43 @@ local function Notify(titleText, descText, duration, iconId)
     duration = duration or 3
 
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, 0, 0, 48)
-    card.BackgroundColor3 = bgMedium
+    card.Size = UDim2.new(1, 0, 0, 50)
+    card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     card.ClipsDescendants = true
     card.Position = UDim2.new(1, 60, 0, 0)
     card.Parent = notifyContainer
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+
+    local cardGrad = Instance.new("UIGradient", card)
+    cardGrad.Rotation = 135
+    cardGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgLight),
+        ColorSequenceKeypoint.new(1, bgMedium)
+    })
 
     local stroke = Instance.new("UIStroke", card)
     stroke.Color = strokeDark
-    stroke.Transparency = 0.2
+    stroke.Transparency = 0.15
     stroke.Thickness = 1
 
     local accentBar = Instance.new("Frame")
-    accentBar.Size = UDim2.new(0, 2, 1, -12)
-    accentBar.Position = UDim2.new(0, 0, 0.5, 0)
+    accentBar.Size = UDim2.new(0, 2, 1, -14)
+    accentBar.Position = UDim2.new(0, 6, 0.5, 0)
     accentBar.AnchorPoint = Vector2.new(0, 0.5)
-    accentBar.BackgroundColor3 = accent
+    accentBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     accentBar.BorderSizePixel = 0
     accentBar.Parent = card
     Instance.new("UICorner", accentBar).CornerRadius = UDim.new(1, 0)
+    local abGrad = Instance.new("UIGradient", accentBar)
+    abGrad.Rotation = 90
+    abGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accent),
+        ColorSequenceKeypoint.new(1, accentDark)
+    })
 
     local nIcon = Instance.new("ImageLabel")
     nIcon.Size = UDim2.new(0, 13, 0, 13)
-    nIcon.Position = UDim2.new(0, 12, 0.5, -13)
+    nIcon.Position = UDim2.new(0, 16, 0.5, -13)
     nIcon.BackgroundTransparency = 1
     nIcon.ImageColor3 = accent
     ApplyIcon(nIcon, iconId or "bell")
@@ -325,7 +338,7 @@ local function Notify(titleText, descText, duration, iconId)
 
     local tLbl = Instance.new("TextLabel")
     tLbl.Size = UDim2.new(1, -36, 0, 14)
-    tLbl.Position = UDim2.new(0, 32, 0, 8)
+    tLbl.Position = UDim2.new(0, 36, 0, 9)
     tLbl.BackgroundTransparency = 1
     tLbl.Text = string.upper(titleText or "NOTIFICATION")
     tLbl.TextColor3 = textMain
@@ -336,7 +349,7 @@ local function Notify(titleText, descText, duration, iconId)
 
     local dLbl = Instance.new("TextLabel")
     dLbl.Size = UDim2.new(1, -36, 0, 13)
-    dLbl.Position = UDim2.new(0, 32, 0, 24)
+    dLbl.Position = UDim2.new(0, 36, 0, 26)
     dLbl.BackgroundTransparency = 1
     dLbl.Text = descText or ""
     dLbl.TextColor3 = textMuted
@@ -346,17 +359,22 @@ local function Notify(titleText, descText, duration, iconId)
     dLbl.Parent = card
 
     local barBg = Instance.new("Frame")
-    barBg.Size = UDim2.new(1, 0, 0, 1)
-    barBg.Position = UDim2.new(0, 0, 1, -1)
+    barBg.Size = UDim2.new(1, 0, 0, 2)
+    barBg.Position = UDim2.new(0, 0, 1, -2)
     barBg.BackgroundColor3 = strokeDark
     barBg.BorderSizePixel = 0
     barBg.Parent = card
 
     local bar = Instance.new("Frame")
     bar.Size = UDim2.new(1, 0, 1, 0)
-    bar.BackgroundColor3 = accent
+    bar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     bar.BorderSizePixel = 0
     bar.Parent = barBg
+    local barGrad = Instance.new("UIGradient", bar)
+    barGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accent),
+        ColorSequenceKeypoint.new(1, accentDark)
+    })
 
     tween:Create(card, smoothTween, {Position = UDim2.new(0, 0, 0, 0)}):Play()
     tween:Create(bar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)}):Play()
@@ -377,10 +395,17 @@ local function addGroupBox(parent, titleText)
     local gb = Instance.new("Frame")
     gb.Size = UDim2.new(1, 0, 0, 0)
     gb.AutomaticSize = Enum.AutomaticSize.Y
-    gb.BackgroundColor3 = bgMedium
+    gb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     gb.ClipsDescendants = true
     gb.Parent = parent
-    Instance.new("UICorner", gb).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", gb).CornerRadius = UDim.new(0, 8)
+
+    local gbGrad = Instance.new("UIGradient", gb)
+    gbGrad.Rotation = 90
+    gbGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgLight),
+        ColorSequenceKeypoint.new(1, bgMedium)
+    })
 
     local gbStroke = Instance.new("UIStroke", gb)
     gbStroke.Color = strokeDark
@@ -395,12 +420,18 @@ local function addGroupBox(parent, titleText)
     topBar.Parent = gb
 
     local accentDot = Instance.new("Frame")
-    accentDot.Size = UDim2.new(0, 3, 0, 10)
-    accentDot.Position = UDim2.new(0, 10, 0.5, -5)
-    accentDot.BackgroundColor3 = accent
+    accentDot.Size = UDim2.new(0, 3, 0, 12)
+    accentDot.Position = UDim2.new(0, 10, 0.5, -6)
+    accentDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     accentDot.BorderSizePixel = 0
     accentDot.Parent = topBar
     Instance.new("UICorner", accentDot).CornerRadius = UDim.new(1, 0)
+    local dotGrad = Instance.new("UIGradient", accentDot)
+    dotGrad.Rotation = 90
+    dotGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accent),
+        ColorSequenceKeypoint.new(1, accentDark)
+    })
 
     local titleLbl = Instance.new("TextLabel")
     titleLbl.Size = UDim2.new(1, -30, 1, 0)
@@ -468,10 +499,10 @@ end
 
 local function addToggle(parent, text, iconId, defaultState, callback)
     local tgl = Instance.new("Frame")
-    tgl.Size = UDim2.new(1, 0, 0, 24)
+    tgl.Size = UDim2.new(1, 0, 0, 26)
     tgl.BackgroundColor3 = bgLight
     tgl.Parent = parent
-    Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", tgl).CornerRadius = UDim.new(0, 6)
     local tStroke = Instance.new("UIStroke", tgl)
     tStroke.Color = strokeDark
     tStroke.Thickness = 1
@@ -492,7 +523,7 @@ local function addToggle(parent, text, iconId, defaultState, callback)
     tIcon.Parent = tgl
 
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -50, 1, 0)
+    lbl.Size = UDim2.new(1, -56, 1, 0)
     lbl.Position = UDim2.new(0, 26, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
@@ -503,25 +534,50 @@ local function addToggle(parent, text, iconId, defaultState, callback)
     lbl.Parent = tgl
 
     local trackBg = Instance.new("Frame")
-    trackBg.Size = UDim2.new(0, 26, 0, 14)
-    trackBg.Position = UDim2.new(1, -32, 0.5, -7)
+    trackBg.Size = UDim2.new(0, 34, 0, 18)
+    trackBg.Position = UDim2.new(1, -40, 0.5, -9)
     trackBg.BackgroundColor3 = strokeDark
     trackBg.Parent = tgl
     Instance.new("UICorner", trackBg).CornerRadius = UDim.new(1, 0)
 
+    local trackFill = Instance.new("Frame")
+    trackFill.Size = UDim2.new(1, 0, 1, 0)
+    trackFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    trackFill.BackgroundTransparency = 1
+    trackFill.BorderSizePixel = 0
+    trackFill.ZIndex = 2
+    trackFill.Parent = trackBg
+    Instance.new("UICorner", trackFill).CornerRadius = UDim.new(1, 0)
+    local trackGrad = Instance.new("UIGradient", trackFill)
+    trackGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accentDark),
+        ColorSequenceKeypoint.new(1, accent)
+    })
+
     local circle = Instance.new("Frame")
-    circle.Size = UDim2.new(0, 10, 0, 10)
-    circle.Position = UDim2.new(0, 2, 0.5, -5)
+    circle.Size = UDim2.new(0, 14, 0, 14)
+    circle.Position = UDim2.new(0, 2, 0.5, -7)
     circle.BackgroundColor3 = textMuted
+    circle.ZIndex = 3
     circle.Parent = trackBg
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+
+    local circleGlow = Instance.new("UIStroke", circle)
+    circleGlow.Color = accent
+    circleGlow.Thickness = 1.5
+    circleGlow.Transparency = 1
 
     local state = defaultState == true
 
     local function setState(nextState, silent)
         state = nextState == true
-        tween:Create(trackBg, fastTween, {BackgroundColor3 = state and accent or strokeDark}):Play()
-        tween:Create(circle,  bounceTween, {Position = state and UDim2.new(1,-12,0.5,-5) or UDim2.new(0,2,0.5,-5), BackgroundColor3 = state and textMain or textMuted}):Play()
+        tween:Create(trackBg,   fastTween, {BackgroundColor3 = state and accentDark or strokeDark}):Play()
+        tween:Create(trackFill, fastTween, {BackgroundTransparency = state and 0 or 1}):Play()
+        tween:Create(circle,    bounceTween, {
+            Position           = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7),
+            BackgroundColor3   = state and textMain or textMuted
+        }):Play()
+        tween:Create(circleGlow, fastTween, {Transparency = state and 0.3 or 1}):Play()
         tween:Create(tStroke, fastTween, {Color = state and accent or strokeDark}):Play()
         tween:Create(tIcon,   fastTween, {ImageColor3 = state and accent or textMuted}):Play()
         tween:Create(lbl,     fastTween, {TextColor3 = state and textMain or textMuted}):Play()
@@ -529,9 +585,11 @@ local function addToggle(parent, text, iconId, defaultState, callback)
     end
 
     if state then
-        trackBg.BackgroundColor3 = accent
-        circle.Position = UDim2.new(1, -12, 0.5, -5)
+        trackBg.BackgroundColor3 = accentDark
+        trackFill.BackgroundTransparency = 0
+        circle.Position = UDim2.new(1, -16, 0.5, -7)
         circle.BackgroundColor3 = textMain
+        circleGlow.Transparency = 0.3
         tStroke.Color = accent
         tIcon.ImageColor3 = accent
         lbl.TextColor3 = textMain
@@ -552,10 +610,10 @@ end
 
 local function addButton(parent, text, iconId, callback)
     local btnBg = Instance.new("Frame")
-    btnBg.Size = UDim2.new(1, 0, 0, 24)
+    btnBg.Size = UDim2.new(1, 0, 0, 26)
     btnBg.BackgroundColor3 = bgLight
     btnBg.Parent = parent
-    Instance.new("UICorner", btnBg).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", btnBg).CornerRadius = UDim.new(0, 6)
 
     local stroke = Instance.new("UIStroke", btnBg)
     stroke.Color = strokeDark
@@ -600,7 +658,7 @@ local function addButton(parent, text, iconId, callback)
         tween:Create(btnBg,  fastTween, {BackgroundColor3 = bgLight}):Play()
     end)
     btn.MouseButton1Down:Connect(function()
-        tween:Create(btnBg, fastTween, {BackgroundColor3 = accentDark}):Play()
+        tween:Create(btnBg,  fastTween, {BackgroundColor3 = accentDark}):Play()
         tween:Create(stroke, fastTween, {Color = accent}):Play()
     end)
     btn.MouseButton1Up:Connect(function()
@@ -620,10 +678,10 @@ end
 
 local function addSlider(parent, text, min, max, iconId, callback)
     local sl = Instance.new("Frame")
-    sl.Size = UDim2.new(1, 0, 0, 32)
+    sl.Size = UDim2.new(1, 0, 0, 34)
     sl.BackgroundColor3 = bgLight
     sl.Parent = parent
-    Instance.new("UICorner", sl).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", sl).CornerRadius = UDim.new(0, 6)
     Instance.new("UIStroke", sl).Color = strokeDark
 
     local sIcon = Instance.new("ImageLabel")
@@ -646,8 +704,8 @@ local function addSlider(parent, text, min, max, iconId, callback)
     lbl.Parent = sl
 
     local valBg = Instance.new("Frame")
-    valBg.Size = UDim2.new(0, 28, 0, 13)
-    valBg.Position = UDim2.new(1, -32, 0, 4)
+    valBg.Size = UDim2.new(0, 30, 0, 14)
+    valBg.Position = UDim2.new(1, -34, 0, 4)
     valBg.BackgroundColor3 = bgDark
     valBg.Parent = sl
     Instance.new("UICorner", valBg).CornerRadius = UDim.new(0, 4)
@@ -664,34 +722,43 @@ local function addSlider(parent, text, min, max, iconId, callback)
     val.Parent = valBg
 
     local barBg = Instance.new("Frame")
-    barBg.Size = UDim2.new(1, -14, 0, 3)
-    barBg.Position = UDim2.new(0, 7, 1, -7)
+    barBg.Size = UDim2.new(1, -16, 0, 4)
+    barBg.Position = UDim2.new(0, 8, 1, -9)
     barBg.BackgroundColor3 = strokeDark
     barBg.Parent = sl
     Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = accent
+    fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     fill.Parent = barBg
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+    local fillGrad = Instance.new("UIGradient", fill)
+    fillGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accentDark),
+        ColorSequenceKeypoint.new(1, accent)
+    })
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 8, 0, 8)
-    knob.Position = UDim2.new(1, -4, 0.5, -4)
+    knob.Size = UDim2.new(0, 12, 0, 12)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new(0, 0, 0.5, 0)
     knob.BackgroundColor3 = textMain
-    knob.Parent = fill
+    knob.ZIndex = 5
+    knob.Parent = barBg
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-    local knobStroke = Instance.new("UIStroke", knob)
-    knobStroke.Color = bgDark
-    knobStroke.Thickness = 1.5
+    local knobRing = Instance.new("UIStroke", knob)
+    knobRing.Color = accent
+    knobRing.Thickness = 1.5
+    knobRing.Transparency = 0.7
 
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 10)
-    btn.Position = UDim2.new(0, 0, 0, -5)
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.Position = UDim2.new(0, 0, 0.5, -14)
     btn.BackgroundTransparency = 1
     btn.Text = ""
+    btn.ZIndex = 6
     btn.Parent = barBg
 
     local value = min
@@ -701,6 +768,7 @@ local function addSlider(parent, text, min, max, iconId, callback)
         value = math.clamp(tonumber(nextValue) or min, min, max)
         local position = (value - min) / (max - min)
         fill.Size = UDim2.new(position, 0, 1, 0)
+        knob.Position = UDim2.new(position, 0, 0.5, 0)
         val.Text = tostring(math.floor(value))
         if not silent and callback then callback(math.floor(value)) end
     end
@@ -708,7 +776,8 @@ local function addSlider(parent, text, min, max, iconId, callback)
     btn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             draggingSlider = true
-            tween:Create(knob,    fastTween, {Size = UDim2.new(0,10,0,10), Position = UDim2.new(1,-5,0.5,-5), BackgroundColor3 = accent}):Play()
+            tween:Create(knob,    fastTween, {Size = UDim2.new(0, 15, 0, 15), BackgroundColor3 = accent}):Play()
+            tween:Create(knobRing,fastTween, {Transparency = 0, Thickness = 2}):Play()
             tween:Create(val,     fastTween, {TextColor3 = accent}):Play()
             tween:Create(vStroke, fastTween, {Color = accent}):Play()
             tween:Create(sIcon,   fastTween, {ImageColor3 = accent}):Play()
@@ -721,7 +790,8 @@ local function addSlider(parent, text, min, max, iconId, callback)
                 Notify(text, "Set to " .. val.Text, 2, iconId or "sliders")
             end
             draggingSlider = false
-            tween:Create(knob,    fastTween, {Size = UDim2.new(0,8,0,8), Position = UDim2.new(1,-4,0.5,-4), BackgroundColor3 = textMain}):Play()
+            tween:Create(knob,    fastTween, {Size = UDim2.new(0, 12, 0, 12), BackgroundColor3 = textMain}):Play()
+            tween:Create(knobRing,fastTween, {Transparency = 0.7, Thickness = 1.5}):Play()
             tween:Create(val,     fastTween, {TextColor3 = textMain}):Play()
             tween:Create(vStroke, fastTween, {Color = strokeDark}):Play()
             tween:Create(sIcon,   fastTween, {ImageColor3 = textMuted}):Play()
@@ -746,17 +816,17 @@ end
 local function addDropdown(parent, text, items, iconId, callback)
     items = items or {}
     local dp = Instance.new("Frame")
-    dp.Size = UDim2.new(1, 0, 0, 24)
+    dp.Size = UDim2.new(1, 0, 0, 26)
     dp.BackgroundColor3 = bgLight
     dp.ClipsDescendants = true
     dp.Parent = parent
-    Instance.new("UICorner", dp).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", dp).CornerRadius = UDim.new(0, 6)
     local dpStroke = Instance.new("UIStroke", dp)
     dpStroke.Color = strokeDark
     dpStroke.Thickness = 1
 
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 24)
+    btn.Size = UDim2.new(1, 0, 0, 26)
     btn.BackgroundTransparency = 1
     btn.AutoButtonColor = false
     btn.Text = ""
@@ -811,7 +881,7 @@ local function addDropdown(parent, text, items, iconId, callback)
     local selected
     local currentItems = {}
     local itemButtons  = {}
-    local targetSize   = 24
+    local targetSize   = 26
 
     for _, item in ipairs(items) do
         table.insert(currentItems, item)
@@ -856,14 +926,14 @@ local function addDropdown(parent, text, items, iconId, callback)
             tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
             tween:Create(dIcon,    fastTween, {ImageColor3 = textMuted}):Play()
             tween:Create(lbl,      fastTween, {TextColor3 = textMuted}):Play()
-            tween:Create(dp,       fastTween, {Size = UDim2.new(1,0,0,24)}):Play()
+            tween:Create(dp,       fastTween, {Size = UDim2.new(1,0,0,26)}):Play()
             Notify(text, "Selected " .. item, 2, iconId or "list")
             if callback then callback(item) end
         end)
     end
 
     targetSize = targetSize + 3
-    itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 24)
+    itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 26)
 
     btn.MouseButton1Click:Connect(function()
         open = not open
@@ -871,7 +941,7 @@ local function addDropdown(parent, text, items, iconId, callback)
         tween:Create(dpStroke, fastTween,   {Color = open and accent or strokeDark}):Play()
         tween:Create(dIcon,    fastTween,   {ImageColor3 = open and accent or textMuted}):Play()
         tween:Create(lbl,      fastTween,   {TextColor3 = open and textMain or textMuted}):Play()
-        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 24)}):Play()
+        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 26)}):Play()
     end)
 
     local function setValue(value, silent)
@@ -896,7 +966,7 @@ local function addDropdown(parent, text, items, iconId, callback)
         currentItems  = nextItems or {}
         itemButtons   = {}
         selected      = nil
-        targetSize    = 24
+        targetSize    = 26
         for _, item in ipairs(currentItems) do
             local iBtn = template:Clone()
             iBtn.Parent = itemsCont
@@ -919,12 +989,12 @@ local function addDropdown(parent, text, items, iconId, callback)
                 tween:Create(dpStroke, fastTween, {Color = strokeDark}):Play()
                 tween:Create(dIcon,    fastTween, {ImageColor3 = textMuted}):Play()
                 tween:Create(lbl,      fastTween, {TextColor3 = textMuted}):Play()
-                tween:Create(dp,       fastTween, {Size = UDim2.new(1, 0, 0, 24)}):Play()
+                tween:Create(dp,       fastTween, {Size = UDim2.new(1, 0, 0, 26)}):Play()
                 Notify(text, "Selected " .. tostring(item), 2, iconId or "list")
             end)
         end
         targetSize = targetSize + 3
-        itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 24)
+        itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 26)
     end
 
     return {
@@ -939,17 +1009,17 @@ end
 
 local function addMultiDropdown(parent, text, items, iconId, callback)
     local dp = Instance.new("Frame")
-    dp.Size = UDim2.new(1, 0, 0, 24)
+    dp.Size = UDim2.new(1, 0, 0, 26)
     dp.BackgroundColor3 = bgLight
     dp.ClipsDescendants = true
     dp.Parent = parent
-    Instance.new("UICorner", dp).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", dp).CornerRadius = UDim.new(0, 6)
     local dpStroke = Instance.new("UIStroke", dp)
     dpStroke.Color = strokeDark
     dpStroke.Thickness = 1
 
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 24)
+    btn.Size = UDim2.new(1, 0, 0, 26)
     btn.BackgroundTransparency = 1
     btn.AutoButtonColor = false
     btn.Text = ""
@@ -1002,7 +1072,7 @@ local function addMultiDropdown(parent, text, items, iconId, callback)
 
     local selected   = {}
     local open       = false
-    local targetSize = 24
+    local targetSize = 26
 
     local function updateText(silent)
         local list = {}
@@ -1067,7 +1137,7 @@ local function addMultiDropdown(parent, text, items, iconId, callback)
     end
 
     targetSize = targetSize + 3
-    itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 24)
+    itemsCont.Size = UDim2.new(1, 0, 0, targetSize - 26)
 
     btn.MouseButton1Click:Connect(function()
         open = not open
@@ -1075,7 +1145,7 @@ local function addMultiDropdown(parent, text, items, iconId, callback)
         tween:Create(dpStroke, fastTween,   {Color = open and accent or strokeDark}):Play()
         tween:Create(dIcon,    fastTween,   {ImageColor3 = open and accent or textMuted}):Play()
         tween:Create(lbl,      fastTween,   {TextColor3 = open and textMain or textMuted}):Play()
-        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 24)}):Play()
+        tween:Create(dp,       fastTween,   {Size = UDim2.new(1,0,0, open and targetSize or 26)}):Play()
     end)
 
     local function setValues(values, silent)
@@ -1114,17 +1184,17 @@ end
 
 local function addColorpicker(parent, text, defaultColor, iconId, callback)
     local cp = Instance.new("Frame")
-    cp.Size = UDim2.new(1, 0, 0, 24)
+    cp.Size = UDim2.new(1, 0, 0, 26)
     cp.BackgroundColor3 = bgLight
     cp.ClipsDescendants = true
     cp.Parent = parent
-    Instance.new("UICorner", cp).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", cp).CornerRadius = UDim.new(0, 6)
     local cpStroke = Instance.new("UIStroke", cp)
     cpStroke.Color = strokeDark
     cpStroke.Thickness = 1
 
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 24)
+    btn.Size = UDim2.new(1, 0, 0, 26)
     btn.BackgroundTransparency = 1
     btn.AutoButtonColor = false
     btn.Text = ""
@@ -1159,10 +1229,10 @@ local function addColorpicker(parent, text, defaultColor, iconId, callback)
 
     local pickerBox = Instance.new("Frame")
     pickerBox.Size = UDim2.new(1, -10, 0, 134)
-    pickerBox.Position = UDim2.new(0, 5, 0, 27)
+    pickerBox.Position = UDim2.new(0, 5, 0, 29)
     pickerBox.BackgroundColor3 = bgDark
     pickerBox.Parent = cp
-    Instance.new("UICorner", pickerBox).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", pickerBox).CornerRadius = UDim.new(0, 6)
     Instance.new("UIStroke", pickerBox).Color = strokeDark
 
     local hexInput = Instance.new("TextBox")
@@ -1298,7 +1368,7 @@ local function addColorpicker(parent, text, defaultColor, iconId, callback)
         tween:Create(cpStroke, fastTween, {Color = open and accent or strokeDark}):Play()
         tween:Create(cIcon,    fastTween, {ImageColor3 = open and accent or textMuted}):Play()
         tween:Create(lbl,      fastTween, {TextColor3 = open and textMain or textMuted}):Play()
-        tween:Create(cp,       fastTween, {Size = UDim2.new(1,0,0, open and 165 or 24)}):Play()
+        tween:Create(cp,       fastTween, {Size = UDim2.new(1,0,0, open and 167 or 26)}):Play()
     end)
 
     return {
@@ -1318,10 +1388,10 @@ end
 
 local function addTextBox(parent, text, placeholder, iconId, callback)
     local tbFrame = Instance.new("Frame")
-    tbFrame.Size = UDim2.new(1, 0, 0, 24)
+    tbFrame.Size = UDim2.new(1, 0, 0, 26)
     tbFrame.BackgroundColor3 = bgLight
     tbFrame.Parent = parent
-    Instance.new("UICorner", tbFrame).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", tbFrame).CornerRadius = UDim.new(0, 6)
     local stroke = Instance.new("UIStroke", tbFrame)
     stroke.Color = strokeDark
     stroke.Thickness = 1
@@ -1397,10 +1467,10 @@ end
 
 local function addKeybind(parent, text, defaultKey, iconId, callback)
     local kbFrame = Instance.new("Frame")
-    kbFrame.Size = UDim2.new(1, 0, 0, 24)
+    kbFrame.Size = UDim2.new(1, 0, 0, 26)
     kbFrame.BackgroundColor3 = bgLight
     kbFrame.Parent = parent
-    Instance.new("UICorner", kbFrame).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", kbFrame).CornerRadius = UDim.new(0, 6)
     local stroke = Instance.new("UIStroke", kbFrame)
     stroke.Color = strokeDark
     stroke.Thickness = 1
@@ -1552,9 +1622,16 @@ function BloodLine:CreateWindow(config)
     wmFrame.AutomaticSize = Enum.AutomaticSize.X
     wmFrame.Size = UDim2.new(0, 0, 0, 26)
     wmFrame.Position = UDim2.new(0, 14, 0, 14)
-    wmFrame.BackgroundColor3 = bgMedium
+    wmFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     wmFrame.Parent = ui
-    Instance.new("UICorner", wmFrame).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", wmFrame).CornerRadius = UDim.new(0, 7)
+
+    local wmGrad = Instance.new("UIGradient", wmFrame)
+    wmGrad.Rotation = 135
+    wmGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgLight),
+        ColorSequenceKeypoint.new(1, bgMedium)
+    })
 
     local wmStroke = Instance.new("UIStroke", wmFrame)
     wmStroke.Color = strokeDark
@@ -1572,11 +1649,17 @@ function BloodLine:CreateWindow(config)
 
     local wmBar = Instance.new("Frame")
     wmBar.Size = UDim2.new(0, 2, 0, 12)
-    wmBar.BackgroundColor3 = accent
+    wmBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     wmBar.BorderSizePixel = 0
     wmBar.LayoutOrder = 1
     wmBar.Parent = wmFrame
     Instance.new("UICorner", wmBar).CornerRadius = UDim.new(1, 0)
+    local wmBarGrad = Instance.new("UIGradient", wmBar)
+    wmBarGrad.Rotation = 90
+    wmBarGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accent),
+        ColorSequenceKeypoint.new(1, accentDark)
+    })
 
     local wmIcon = Instance.new("ImageLabel")
     wmIcon.Size = UDim2.new(0, 13, 0, 13)
@@ -1633,55 +1716,84 @@ function BloodLine:CreateWindow(config)
     notifyList.Parent            = notifyContainer
 
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 34, 0, 34)
+    toggleBtn.Size = UDim2.new(0, 36, 0, 36)
     toggleBtn.Position = UDim2.new(0.014, 0, 0.15, 0)
-    toggleBtn.BackgroundColor3 = bgMedium
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     toggleBtn.AutoButtonColor = false
     toggleBtn.Text = ""
     toggleBtn.Parent = ui
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
+
+    local tBtnGrad = Instance.new("UIGradient", toggleBtn)
+    tBtnGrad.Rotation = 135
+    tBtnGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgLight),
+        ColorSequenceKeypoint.new(1, bgMedium)
+    })
 
     local tGlow = Instance.new("UIStroke", toggleBtn)
     tGlow.Color = accent
     tGlow.Transparency = 0.2
-    tGlow.Thickness = 1
+    tGlow.Thickness = 1.5
 
     local tBtnIcon = Instance.new("ImageLabel")
-    tBtnIcon.Size = UDim2.new(0, 17, 0, 17)
-    tBtnIcon.Position = UDim2.new(0.5, -8, 0.5, -8)
+    tBtnIcon.Size = UDim2.new(0, 18, 0, 18)
+    tBtnIcon.Position = UDim2.new(0.5, -9, 0.5, -9)
     tBtnIcon.BackgroundTransparency = 1
     tBtnIcon.ImageColor3 = accent
     tBtnIcon.Image = windowLogo
     tBtnIcon.Parent = toggleBtn
 
     local main = Instance.new("Frame")
-    main.Size = UDim2.new(0, 640, 0, 345)
-    main.Position = UDim2.new(0.5, -320, 0.5, -172)
-    main.BackgroundColor3 = bgDark
+    main.Size = UDim2.new(0, 640, 0, 348)
+    main.Position = UDim2.new(0.5, -320, 0.5, -174)
+    main.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     main.ClipsDescendants = true
     main.Parent = ui
-    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+
+    local mainGrad = Instance.new("UIGradient", main)
+    mainGrad.Rotation = 120
+    mainGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgMedium),
+        ColorSequenceKeypoint.new(0.5, bgDark),
+        ColorSequenceKeypoint.new(1, bgDark)
+    })
 
     local mStroke = Instance.new("UIStroke", main)
     mStroke.Color = strokeDark
-    mStroke.Thickness = 1
+    mStroke.Thickness = 1.5
     mStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
     local titleBar = Instance.new("Frame")
     titleBar.Size = UDim2.new(1, 0, 0, 40)
-    titleBar.BackgroundColor3 = bgMedium
+    titleBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     titleBar.BorderSizePixel = 0
     titleBar.Parent = main
 
+    local tBarGrad = Instance.new("UIGradient", titleBar)
+    tBarGrad.Rotation = 90
+    tBarGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgLight),
+        ColorSequenceKeypoint.new(1, bgMedium)
+    })
+
     local tBarCornerFix = Instance.new("UICorner", titleBar)
-    tBarCornerFix.CornerRadius = UDim.new(0, 8)
+    tBarCornerFix.CornerRadius = UDim.new(0, 10)
 
     local tBarFix = Instance.new("Frame")
     tBarFix.Size = UDim2.new(1, 0, 0.5, 0)
     tBarFix.Position = UDim2.new(0, 0, 0.5, 0)
-    tBarFix.BackgroundColor3 = bgMedium
+    tBarFix.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     tBarFix.BorderSizePixel = 0
     tBarFix.Parent = titleBar
+
+    local tBarFixGrad = Instance.new("UIGradient", tBarFix)
+    tBarFixGrad.Rotation = 90
+    tBarFixGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgLight),
+        ColorSequenceKeypoint.new(1, bgMedium)
+    })
 
     local tLine = Instance.new("Frame")
     tLine.Size = UDim2.new(1, 0, 0, 1)
@@ -1691,12 +1803,17 @@ function BloodLine:CreateWindow(config)
     tLine.Parent = titleBar
 
     local accentLine = Instance.new("Frame")
-    accentLine.Size = UDim2.new(0, 40, 0, 2)
+    accentLine.Size = UDim2.new(0, 48, 0, 2)
     accentLine.Position = UDim2.new(0, 10, 1, -2)
-    accentLine.BackgroundColor3 = accent
+    accentLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     accentLine.BorderSizePixel = 0
     accentLine.Parent = titleBar
     Instance.new("UICorner", accentLine).CornerRadius = UDim.new(1, 0)
+    local accentLineGrad = Instance.new("UIGradient", accentLine)
+    accentLineGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accent),
+        ColorSequenceKeypoint.new(1, accentDark)
+    })
 
     local titleIcon = Instance.new("ImageLabel")
     titleIcon.Size = UDim2.new(0, 15, 0, 15)
@@ -1738,15 +1855,16 @@ function BloodLine:CreateWindow(config)
     local footer = Instance.new("Frame")
     footer.Size = UDim2.new(1, 0, 0, 18)
     footer.Position = UDim2.new(0, 0, 1, -18)
-    footer.BackgroundColor3 = bgMedium
+    footer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     footer.BorderSizePixel = 0
     footer.Parent = main
 
-    local fBgFix = Instance.new("Frame")
-    fBgFix.Size = UDim2.new(1, 0, 0.5, 0)
-    fBgFix.BackgroundColor3 = bgMedium
-    fBgFix.BorderSizePixel = 0
-    fBgFix.Parent = footer
+    local footerGrad = Instance.new("UIGradient", footer)
+    footerGrad.Rotation = 90
+    footerGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, bgMedium),
+        ColorSequenceKeypoint.new(1, bgLight)
+    })
 
     local fLine = Instance.new("Frame")
     fLine.Size = UDim2.new(1, 0, 0, 1)
@@ -1849,7 +1967,7 @@ function BloodLine:CreateWindow(config)
         setCurrentTheme(nextTheme)
         windowThemeName = type(theme) == "string" and theme or windowThemeName
         refreshTheme(ui, oldTheme, nextTheme)
-        wmBar.BackgroundColor3 = accent
+        wmBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         wmIcon.ImageColor3 = accent
         wmText.TextColor3 = textMain
         wmStats.TextColor3 = textMuted
@@ -1860,7 +1978,7 @@ function BloodLine:CreateWindow(config)
         fTextRight.TextColor3 = accent
         titleIcon.ImageColor3 = accent
         titleLbl.TextColor3 = textMain
-        accentLine.BackgroundColor3 = accent
+        accentLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         for _, entry in ipairs(tabRegistry) do
             entry.theme = nextTheme
             entry.themeName = windowThemeName
@@ -2044,11 +2162,16 @@ function BloodLine:CreateWindow(config)
         tabUnderline.Size = UDim2.new(isFirst and 0.6 or 0, 0, 0, 2)
         tabUnderline.Position = UDim2.new(0.5, 0, 1, -2)
         tabUnderline.AnchorPoint = Vector2.new(0.5, 0)
-        tabUnderline.BackgroundColor3 = accent
+        tabUnderline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         tabUnderline.BackgroundTransparency = isFirst and 0 or 1
         tabUnderline.BorderSizePixel = 0
         tabUnderline.Parent = tabBtn
         Instance.new("UICorner", tabUnderline).CornerRadius = UDim.new(1, 0)
+        local tuGrad = Instance.new("UIGradient", tabUnderline)
+        tuGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, accent),
+            ColorSequenceKeypoint.new(1, accentDark)
+        })
 
         local tabFrame = Instance.new("Frame")
         tabFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -2074,7 +2197,7 @@ function BloodLine:CreateWindow(config)
         leftScroll.BackgroundTransparency = 1
         leftScroll.ScrollBarThickness = 2
         leftScroll.ScrollBarImageColor3 = accent
-        leftScroll.ScrollBarImageTransparency = 0.5
+        leftScroll.ScrollBarImageTransparency = 0.4
         leftScroll.BorderSizePixel = 0
         leftScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
         leftScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -2095,7 +2218,7 @@ function BloodLine:CreateWindow(config)
         rightScroll.BackgroundTransparency = 1
         rightScroll.ScrollBarThickness = 2
         rightScroll.ScrollBarImageColor3 = accent
-        rightScroll.ScrollBarImageTransparency = 0.5
+        rightScroll.ScrollBarImageTransparency = 0.4
         rightScroll.BorderSizePixel = 0
         rightScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
         rightScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
